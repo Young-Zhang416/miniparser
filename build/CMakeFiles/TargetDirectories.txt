@@ -1,0 +1,3 @@
+/home/young/Project/miniparser/build/CMakeFiles/miniparser.dir
+/home/young/Project/miniparser/build/CMakeFiles/edit_cache.dir
+/home/young/Project/miniparser/build/CMakeFiles/rebuild_cache.dir
