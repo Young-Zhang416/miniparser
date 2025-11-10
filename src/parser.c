@@ -329,7 +329,7 @@ void block(Parser* parser) {
         return;
     }
 
-    while(current_token_type(parser) == EOLN) {
+    while (current_token_type(parser) == EOLN) {
         next_token(parser);
     }
 
@@ -349,7 +349,7 @@ void declarations(Parser* parser) {
             return;
         }
 
-        while(current_token_type(parser) == EOLN) {
+        while (current_token_type(parser) == EOLN) {
             next_token(parser);
         }
     }
@@ -428,13 +428,13 @@ void func_declaration(Parser* parser) {
         return;
     }
 
-    if(!match(parser, SEMICOLON)) {
+    if (!match(parser, SEMICOLON)) {
         parser->current_level--;
         strcpy(parser->current_proc, old_proc);
         return;
     }
 
-    while(current_token_type(parser) == EOLN) {
+    while (current_token_type(parser) == EOLN) {
         next_token(parser);
     }
 
@@ -453,7 +453,7 @@ bool is_execution_token(TokenType type) {
 void executions(Parser* parser) {
     while (is_execution_token(current_token_type(parser))) {
         execution(parser);
-        while(current_token_type(parser) == EOLN) {
+        while (current_token_type(parser) == EOLN) {
             next_token(parser);
         }
     }
@@ -573,11 +573,22 @@ void assignment_statement(Parser* parser) {
         return;
     }
 
+    // Check if the identifier is the function name itself (for return value assignment)
+    bool is_return_assignment = (strcmp(parser->current_token.value, parser->current_proc) == 0);
+
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
-    if (var_entry == NULL) {
+
+    if (var_entry == NULL && !is_return_assignment) {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
+        // Consume the token to prevent infinite loop and try to continue
+        match(parser, IDENT);
+        if (current_token_type(parser) == ASSIGN) {
+            match(parser, ASSIGN);
+            arithmetic_expression(parser);
+        }
+        match(parser, SEMICOLON);
         return;
     }
 
