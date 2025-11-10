@@ -27,4 +27,5 @@ CMakeFiles/miniparser.dir/src/main.c.o: \
  /home/young/Project/miniparser/include/parser.h \
  /home/young/Project/miniparser/include/token.h \
  /home/young/Project/miniparser/include/table.h \
+ /home/young/Project/miniparser/include/var.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h

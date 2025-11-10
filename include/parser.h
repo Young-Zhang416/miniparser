@@ -42,7 +42,7 @@ void next_token(Parser*);
 TokenType current_token_type(Parser*);
 TokenType peek_token_type(Parser*);
 bool match(Parser*, TokenType);
-void add_variable(Parser*, const char*, int, int);
+void add_variable(Parser*, const char*, VarType, int);
 void add_procedure(Parser*, const char*, int, int);
 void parser_error(Parser*, const char*);
 bool is_valid_identifier(const char*);

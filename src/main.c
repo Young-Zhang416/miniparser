@@ -13,6 +13,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    print_tokens(parser);
+
     bool result = program(parser);
     
     printf("Parsing %s\n", result ? "successful" : "failed");

@@ -207,7 +207,7 @@ bool match(Parser* parser, TokenType type) {
     return false;
 }
 
-void add_variable(Parser* parser, const char* value, int type, int kind) {
+void add_variable(Parser* parser, const char* value, VarType type, int kind) {
     if (!is_valid_identifier(value)) {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Error at line %d: invalid identifier '%s'\n", parser->line_number, value);
@@ -215,7 +215,14 @@ void add_variable(Parser* parser, const char* value, int type, int kind) {
         return;
     }
 
-    if (find_variable(parser, value, parser->current_proc) != NULL) {
+    VariableEntry* exist = find_variable(parser, value, parser->current_proc);
+    if (exist != NULL) {
+        // 合并“函数体内声明”的形参类型定义：已存在且是参数（vkind=1），当前是普通变量声明（kind=0）
+        if (exist->vkind == 1 && kind == 0) {
+            exist->vtype = type; // 确认参数类型（VAR_UNKNOWN -> VAR_INT）
+            return;
+        }
+        // 其它情况为重复声明错误
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' already declared in procedure '%s'\n", parser->line_number, value, parser->current_proc);
         parser_error(parser, error_msg);
@@ -274,24 +281,36 @@ void add_procedure(Parser* parser, const char* name, int var_start, int var_end)
     strncpy(proc_entry->pname, name, sizeof(proc_entry->pname) - 1);
     proc_entry->pname[sizeof(proc_entry->pname) - 1] = '\0';
     proc_entry->faddr = var_start;
-    proc_entry->laddr = var_end;
+    proc_entry->laddr = var_end; // -1 means not finalized yet
     proc_entry->plev = parser->current_level;
     proc_entry->ptype = VAR_FUNCTION;
     parser->proc_count++;
 }
 
+void update_procedure(Parser* parser, const char* name, int var_start, int var_end) {
+    ProcedureEntry* proc = find_procedure(parser, name);
+    if (!proc) {
+        char error_msg[128];
+        snprintf(error_msg, sizeof(error_msg), "Internal Error: procedure '%s' not found for update\n", name);
+        parser_error(parser, error_msg);
+        return;
+    }
+    proc->faddr = var_start;
+    proc->laddr = var_end;
+}
+
 void parser_error(Parser* parser, const char* msg) {
     parser->has_error = 1;
     if (parser->err) {
-        fprintf(parser->err, "%s", msg);
+        fprintf(parser->err, "LINE:%d %s;\n", parser->line_number, msg);
     }
-    fprintf(stderr, "%s", msg);
+    fprintf(stderr, "LINE:%d %s;\n", parser->line_number, msg);
 }
 
 bool is_valid_identifier(const char* str) {
-    if (!str || !isalpha(str[0])) return false;
+    if (!str || !isalpha((unsigned char)str[0])) return false;
     for (int i = 1; str[i] != '\0'; i++) {
-        if (!isalnum(str[i]) && str[i] != '_') return false;
+        if (!isalnum((unsigned char)str[i]) && str[i] != '_') return false;
     }
     return true;
 }
@@ -335,7 +354,15 @@ void block(Parser* parser) {
 
     declarations(parser);
 
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
+    }
+
     executions(parser);
+
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
+    }
 
     if (!match(parser, END)) {
         return;
@@ -345,9 +372,6 @@ void block(Parser* parser) {
 void declarations(Parser* parser) {
     while (current_token_type(parser) == INTEGER) {
         declaration(parser);
-        if (!match(parser, SEMICOLON)) {
-            return;
-        }
 
         while (current_token_type(parser) == EOLN) {
             next_token(parser);
@@ -363,21 +387,28 @@ void declaration(Parser* parser) {
         return;
     }
 
-    if (peek_token_type(parser) == FUNCTION) {
+    TokenType lookahead = peek_token_type(parser);
+    if (lookahead == FUNCTION) {
         func_declaration(parser);
     }
-    else if (peek_token_type(parser) == IDENT) {
-        var_declaration(parser);
+    else if (lookahead == IDENT) {
+        var_declaration(parser); 
     }
     else {
         char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected variable or function declaration but found token type %d\n", parser->line_number, current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected variable or function declaration but found token type %d\n", parser->line_number, lookahead);
         parser_error(parser, error_msg);
     }
 }
 
 void var_declaration(Parser* parser) {
     var(parser, 0);
+    if (!match(parser, SEMICOLON)) {
+        return;
+    }
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
+    }
 }
 
 void var(Parser* parser, int kind) {
@@ -412,14 +443,21 @@ void func_declaration(Parser* parser) {
     strcpy(func_name, parser->current_token.value);
 
     int var_start = parser->var_count;
-    match(parser, IDENT); // consume function name
-    match(parser, OPENPAREN); // consume '('
+    match(parser, IDENT); // function name
+    if (!match(parser, OPENPAREN)) {
+        return;
+    }
 
     char old_proc[16];
     strcpy(old_proc, parser->current_proc);
+    // 进入函数作用域
     strcpy(parser->current_proc, func_name);
     parser->current_level++;
 
+    // 提前登记，支持递归
+    add_procedure(parser, func_name, var_start, -1);
+
+    // 形参（单个）
     parameter(parser);
 
     if (!match(parser, CLOSEPAREN)) {
@@ -428,6 +466,7 @@ void func_declaration(Parser* parser) {
         return;
     }
 
+    // 函数头分号
     if (!match(parser, SEMICOLON)) {
         parser->current_level--;
         strcpy(parser->current_proc, old_proc);
@@ -438,16 +477,19 @@ void func_declaration(Parser* parser) {
         next_token(parser);
     }
 
+    // 函数体
     block(parser);
 
+    int var_end = parser->var_count - 1;
+    update_procedure(parser, func_name, var_start, var_end);
+
+    // 离开函数作用域
     strcpy(parser->current_proc, old_proc);
     parser->current_level--;
-    int var_end = parser->var_count - 1;
-    add_procedure(parser, func_name, var_start, var_end);
 }
 
 bool is_execution_token(TokenType type) {
-    return type == READ || type == WRITE || type == IF || type == IDENT;
+    return type == READ || type == WRITE || type == IF || type == IDENT || type == BEGIN;
 }
 
 void executions(Parser* parser) {
@@ -478,20 +520,27 @@ void execution(Parser* parser) {
         assignment_statement(parser);
         break;
 
+    case BEGIN:
+        // 块语句作为语句出现，不需要分号
+        block(parser);
+        break;
+
     default:
+    {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: unexpected token type %d in execution\n", parser->line_number, cur_type);
         parser_error(parser, error_msg);
-        break;
+    }
+    break;
     }
 }
 
 void parameter(Parser* parser) {
     if (current_token_type(parser) != IDENT) {
-        return;
+        return; // 允许无参，但当前语言只支持单参；此处无参直接返回
     }
-
-    add_variable(parser, parser->current_token.value, VAR_INT, 1);
+    // 形参：vkind=1，类型未知，待函数体内 integer 声明确定
+    add_variable(parser, parser->current_token.value, VAR_UNKNOWN, 1);
     match(parser, IDENT);
 }
 
@@ -573,7 +622,7 @@ void assignment_statement(Parser* parser) {
         return;
     }
 
-    // Check if the identifier is the function name itself (for return value assignment)
+    // 函数名可作为返回变量
     bool is_return_assignment = (strcmp(parser->current_token.value, parser->current_proc) == 0);
 
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
@@ -582,7 +631,7 @@ void assignment_statement(Parser* parser) {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
-        // Consume the token to prevent infinite loop and try to continue
+        // 同步：尽量消费本条语句
         match(parser, IDENT);
         if (current_token_type(parser) == ASSIGN) {
             match(parser, ASSIGN);
@@ -633,7 +682,7 @@ void factor(Parser* parser) {
     TokenType cur_type = current_token_type(parser);
     switch (cur_type) {
     case IDENT:
-        if (parser->token_index < parser->token_count && peek_token_type(parser) == OPENPAREN) {
+        if (peek_token_type(parser) == OPENPAREN) {
             func_call(parser);
         }
         else {
@@ -652,10 +701,12 @@ void factor(Parser* parser) {
         break;
 
     default:
+    {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: unexpected token type %d in factor\n", parser->line_number, cur_type);
         parser_error(parser, error_msg);
-        break;
+    }
+    break;
     }
 }
 
@@ -700,7 +751,7 @@ void func_call(Parser* parser) {
     match(parser, CLOSEPAREN);
 }
 
-//only support single parameter for now
+// only support single parameter for now
 void parameter_list(Parser* parser) {
     arithmetic_expression(parser);
 }
@@ -716,11 +767,22 @@ void conditional_statement(Parser* parser) {
         return;
     }
 
-    executions(parser);
+    // THEN 后解析单个语句，前后跳过 EOLN
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
+    }
+    execution(parser);
+
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
+    }
 
     if (current_token_type(parser) == ELSE) {
         match(parser, ELSE);
-        executions(parser);
+        while (current_token_type(parser) == EOLN) {
+            next_token(parser);
+        }
+        execution(parser);
     }
 }
 
@@ -743,10 +805,12 @@ void relation_operator(Parser* parser) {
         match(parser, type);
         break;
     default:
+    {
         char error_msg[128];
         snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected relational operator but found token type %d\n", parser->line_number, type);
         parser_error(parser, error_msg);
-        break;
+    }
+    break;
     }
 }
 

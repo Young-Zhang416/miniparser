@@ -1,8 +1,0 @@
-Error at line 5: variable 'n' already declared in procedure 'F'
-Syntax Error at line 7: expected token type 23 but found 24
-Error at line 7: procedure 'F' not declared
-Syntax Error at line 7: expected token type 23 but found 10
-Syntax Error at line 7: expected token type 20 but found 21
-Syntax Error at line 7: expected token type 2 but found 21
-Syntax Error at line 7: expected token type 23 but found 21
-Syntax Error at line 7: expected token type 2 but found 21

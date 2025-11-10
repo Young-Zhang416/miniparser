@@ -34,4 +34,5 @@ CMakeFiles/miniparser.dir/src/parser.c.o: \
  /home/young/Project/miniparser/include/parser.h \
  /home/young/Project/miniparser/include/token.h \
  /home/young/Project/miniparser/include/table.h \
+ /home/young/Project/miniparser/include/var.h \
  /home/young/Project/miniparser/include/var.h
