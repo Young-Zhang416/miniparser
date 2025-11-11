@@ -1,3 +1,0 @@
-/data1/zhangyang/github/miniparser/build/CMakeFiles/rebuild_cache.dir
-/data1/zhangyang/github/miniparser/build/CMakeFiles/edit_cache.dir
-/data1/zhangyang/github/miniparser/build/CMakeFiles/miniparser.dir
