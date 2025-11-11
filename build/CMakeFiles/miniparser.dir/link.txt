@@ -1,1 +1,1 @@
-/usr/bin/gcc -g CMakeFiles/miniparser.dir/src/main.c.o CMakeFiles/miniparser.dir/src/parser.c.o -o /home/young/Project/miniparser/target/miniparser 
+/usr/bin/cc    CMakeFiles/miniparser.dir/src/main.c.o CMakeFiles/miniparser.dir/src/parser.c.o CMakeFiles/miniparser.dir/src/table.c.o CMakeFiles/miniparser.dir/src/token.c.o CMakeFiles/miniparser.dir/src/var.c.o  -o ../target/miniparser 

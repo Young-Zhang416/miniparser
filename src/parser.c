@@ -56,7 +56,7 @@ Parser* create_parser(const char* filename) {
         }
 
         if (parser->token_count >= MAX_TOKENS) {
-            fprintf(stderr, "Error: too many tokens\n");
+            fprintf(stderr, "tokens overflow\n");
             free(line);
             fclose(file);
             free(filename_copy);
@@ -168,13 +168,13 @@ void print_tokens(Parser* parser) {
 }
 
 void next_token(Parser* parser) {
+    if (current_token_type(parser) == EOLN) {
+        parser->line_number++;
+    }
+ 
     if (parser->token_index < parser->token_count) {
         parser->current_token = parser->tokens[parser->token_index++];
-
-        if (current_token_type(parser) == EOLN) {
-            parser->line_number++;
-        }
-    }
+   }
     else {
         parser->current_token.type = _EOF;
         parser->current_token.value[0] = '\0';
@@ -191,6 +191,12 @@ TokenType peek_token_type(Parser* parser) {
     }
     else {
         return _EOF;
+    }
+}
+
+void consume_eoln(Parser* parser){
+    while (current_token_type(parser) == EOLN) {
+        next_token(parser);
     }
 }
 
@@ -211,136 +217,8 @@ bool match(Parser* parser, TokenType type) {
     return false;
 }
 
-const char* get_token_name(TokenType type) {
-    switch (type) {
-        case BEGIN: return "begin";
-        case END: return "end";
-        case INTEGER: return "integer";
-        case IF: return "if";
-        case THEN: return "then";
-        case ELSE: return "else";
-        case FUNCTION: return "function";
-        case READ: return "read";
-        case WRITE: return "write";
-        case IDENT: return "ident";
-        case CONST: return "const";
-        case EQU: return "==";
-        case NEQ: return "<>";
-        case LE: return "<=";
-        case LT: return "<";
-        case GE: return ">=";
-        case GT: return ">";
-        case MINUS: return "-";
-        case MUL: return "*";
-        case ASSIGN: return ":=";
-        case OPENPAREN: return "(";
-        case CLOSEPAREN: return ")";
-        case SEMICOLON: return ";";
-        case EOLN: return "\\n";
-        case _EOF: return "EOF";
-        default: return "unknown";
-    }
-}
 
-void add_variable(Parser* parser, const char* value, VarType type, int kind) {
-    if (!is_valid_identifier(value)) {
-        char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), 
-                 "invalid identifier '%s'", 
-                 value);
-        parser_error(parser, error_msg);
-        return;
-    }
 
-    VariableEntry* exist = find_variable(parser, value, parser->current_proc);
-    if (exist != NULL) {
-        if (exist->vkind == 1 && kind == 0) {
-            exist->vtype = type; 
-            return;
-        }
-        char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), 
-                 "variable '%s' already declared in procedure '%s'", 
-                 value, parser->current_proc);
-        parser_error(parser, error_msg);
-        return;
-    }
-
-    if (parser->var_count >= parser->var_capacity) {
-        parser->var_capacity *= 2;
-        VariableEntry* new_vartab = (VariableEntry*)realloc(parser->vartab, parser->var_capacity * sizeof(VariableEntry));
-        if (!new_vartab) {
-            perror("Failed to reallocate variable table");
-            parser_error(parser, "Error: failed to reallocate variable table\n");
-            return;
-        }
-        parser->vartab = new_vartab;
-    }
-
-    VariableEntry* var_entry = &parser->vartab[parser->var_count];
-    strncpy(var_entry->vname, value, sizeof(var_entry->vname) - 1);
-    var_entry->vname[sizeof(var_entry->vname) - 1] = '\0';
-    strncpy(var_entry->vproc, parser->current_proc, sizeof(var_entry->vproc) - 1);
-    var_entry->vproc[sizeof(var_entry->vproc) - 1] = '\0';
-    var_entry->vkind = kind; // 0 for variable, 1 for parameter
-    var_entry->vtype = type;
-    var_entry->vlev = parser->current_level;
-    var_entry->vaddr = parser->var_count++; // Simple address allocation based on count
-}
-
-void add_procedure(Parser* parser, const char* name, int var_start, int var_end) {
-    if (!is_valid_identifier(name)) {
-        char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), 
-                 "invalid procedure name '%s'", 
-                 name);
-        parser_error(parser, error_msg);
-        return;
-    }
-
-    if (find_procedure(parser, name) != NULL) {
-        char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), 
-                 "procedure '%s' already declared", 
-                 name);
-        parser_error(parser, error_msg);
-        return;
-    }
-
-    if (parser->proc_count >= parser->proc_capacity) {
-        parser->proc_capacity *= 2;
-        ProcedureEntry* new_proctab = (ProcedureEntry*)realloc(parser->proctab, parser->proc_capacity * sizeof(ProcedureEntry));
-        if (!new_proctab) {
-            perror("Failed to reallocate procedure table");
-            parser_error(parser, "Error: failed to reallocate procedure table\n");
-            return;
-        }
-        parser->proctab = new_proctab;
-    }
-
-    ProcedureEntry* proc_entry = &parser->proctab[parser->proc_count];
-    strncpy(proc_entry->pname, name, sizeof(proc_entry->pname) - 1);
-    proc_entry->pname[sizeof(proc_entry->pname) - 1] = '\0';
-    proc_entry->faddr = var_start;
-    proc_entry->laddr = var_end; // -1 means not finalized yet
-    proc_entry->plev = parser->current_level;
-    proc_entry->ptype = VAR_FUNCTION;
-    parser->proc_count++;
-}
-
-void update_procedure(Parser* parser, const char* name, int var_start, int var_end) {
-    ProcedureEntry* proc = find_procedure(parser, name);
-    if (!proc) {
-        char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), 
-                 "Internal Error: procedure '%s' not found for update", 
-                 name);
-        parser_error(parser, error_msg);
-        return;
-    }
-    proc->faddr = var_start;
-    proc->laddr = var_end;
-}
 
 void parser_error(Parser* parser, const char* msg) {
     parser->has_error = 1;
@@ -348,6 +226,11 @@ void parser_error(Parser* parser, const char* msg) {
         fprintf(parser->err, "LINE:%d %s\n", parser->line_number, msg);
     }
     fprintf(stderr, "LINE:%d %s\n", parser->line_number, msg);
+
+    // clear the resources and exit
+    destroy_parser(parser);
+
+    exit(EXIT_FAILURE);
 }
 
 bool is_valid_identifier(const char* str) {
@@ -356,25 +239,6 @@ bool is_valid_identifier(const char* str) {
         if (!isalnum((unsigned char)str[i]) && str[i] != '_') return false;
     }
     return true;
-}
-
-VariableEntry* find_variable(Parser* parser, const char* var_name, const char* proc_name) {
-    for (int i = 0; i < parser->var_count; i++) {
-        if (strcmp(parser->vartab[i].vname, var_name) == 0 &&
-            strcmp(parser->vartab[i].vproc, proc_name) == 0) {
-            return &parser->vartab[i];
-        }
-    }
-    return NULL;
-}
-
-ProcedureEntry* find_procedure(Parser* parser, const char* proc_name) {
-    for (int i = 0; i < parser->proc_count; i++) {
-        if (strcmp(parser->proctab[i].pname, proc_name) == 0) {
-            return &parser->proctab[i];
-        }
-    }
-    return NULL;
 }
 
 bool program(Parser* parser) {
@@ -387,53 +251,31 @@ bool program(Parser* parser) {
 }
 
 void block(Parser* parser) {
-    if (!match(parser, BEGIN)) {
+    if (!match(parser, BEGIN) || !match(parser, EOLN)) {
         return;
-    }
-
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
     }
 
     declarations(parser);
 
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
-
     executions(parser);
 
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
+    consume_eoln(parser);
 
     if (!match(parser, END)) {
         return;
     }
+
+    consume_eoln(parser);
 }
 
 void declarations(Parser* parser) {
     while (current_token_type(parser) == INTEGER) {
         declaration(parser);
-
-        while (current_token_type(parser) == EOLN) {
-            next_token(parser);
-        }
     }
 }
 
 void declaration(Parser* parser) {
-    if (current_token_type(parser) != INTEGER) {
-        char error_msg[256];
-        const char* actual_token_name = get_token_name(current_token_type(parser));
-        snprintf(error_msg, sizeof(error_msg), 
-                 "expected 'INTEGER' at the beginning of declaration but found '%s'", 
-                 actual_token_name);
-        parser_error(parser, error_msg);
-        return;
-    }
-
-    TokenType lookahead = peek_token_type(parser);
+    TokenType lookahead = peek_token_type(parser); // lookahead one token
     if (lookahead == FUNCTION) {
         func_declaration(parser);
     }
@@ -441,6 +283,7 @@ void declaration(Parser* parser) {
         var_declaration(parser); 
     }
     else {
+        // only INTEGER followed by FUNCTION or IDENT is valid
         char error_msg[256];
         const char* lookahead_token_name = get_token_name(lookahead);
         snprintf(error_msg, sizeof(error_msg), 
@@ -455,9 +298,7 @@ void var_declaration(Parser* parser) {
     if (!match(parser, SEMICOLON)) {
         return;
     }
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
+    consume_eoln(parser);
 }
 
 void var(Parser* parser, int kind) {
@@ -476,11 +317,11 @@ void var(Parser* parser, int kind) {
     }
 
     add_variable(parser, parser->current_token.value, VAR_INT, kind);
-    match(parser, IDENT);
+    match(parser, IDENT); // consume identifier
 }
 
 void func_declaration(Parser* parser) {
-    if (!match(parser, INTEGER) || !match(parser, FUNCTION)) {
+    if (!match(parser, INTEGER) || !match(parser, FUNCTION)) { // consume 'integer function'
         return;
     }
 
@@ -498,7 +339,8 @@ void func_declaration(Parser* parser) {
     strcpy(func_name, parser->current_token.value);
 
     int var_start = parser->var_count;
-    match(parser, IDENT); // function name
+    match(parser, IDENT); // consume function name
+
     if (!match(parser, OPENPAREN)) {
         return;
     }
@@ -508,7 +350,7 @@ void func_declaration(Parser* parser) {
     strcpy(parser->current_proc, func_name);
     parser->current_level++;
 
-    add_procedure(parser, func_name, var_start, -1);
+    add_procedure(parser, func_name, var_start, -1); // -1 means not finalized yet
 
     parameter(parser);
 
@@ -524,9 +366,7 @@ void func_declaration(Parser* parser) {
         return;
     }
 
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
+    consume_eoln(parser);
 
     block(parser);
 
@@ -544,9 +384,6 @@ bool is_execution_token(TokenType type) {
 void executions(Parser* parser) {
     while (is_execution_token(current_token_type(parser))) {
         execution(parser);
-        while (current_token_type(parser) == EOLN) {
-            next_token(parser);
-        }
     }
 }
 
@@ -632,6 +469,8 @@ void read_statement(Parser* parser) {
     if (!match(parser, SEMICOLON)) {
         return;
     }
+
+    consume_eoln(parser);
 }
 
 void write_statement(Parser* parser) {
@@ -672,6 +511,8 @@ void write_statement(Parser* parser) {
     if (!match(parser, SEMICOLON)) {
         return;
     }
+
+    consume_eoln(parser);
 }
 
 void assignment_statement(Parser* parser) {
@@ -713,6 +554,8 @@ void assignment_statement(Parser* parser) {
     if (!match(parser, SEMICOLON)) {
         return;
     }
+
+    consume_eoln(parser);
 }
 
 void arithmetic_expression(Parser* parser) {
@@ -843,22 +686,14 @@ void conditional_statement(Parser* parser) {
         return;
     }
 
-    // THEN 后解析单个语句，前后跳过 EOLN
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
-    execution(parser);
+    consume_eoln(parser);
 
-    while (current_token_type(parser) == EOLN) {
-        next_token(parser);
-    }
+    executions(parser);
 
     if (current_token_type(parser) == ELSE) {
         match(parser, ELSE);
-        while (current_token_type(parser) == EOLN) {
-            next_token(parser);
-        }
-        execution(parser);
+        consume_eoln(parser);
+        executions(parser);
     }
 }
 
@@ -896,13 +731,13 @@ void relation_operator(Parser* parser) {
 void output_to_file(Parser* p) {
     for (int i = 0; i < p->proc_count; i++) {
         ProcedureEntry* proc = &p->proctab[i];
-        fprintf(p->pro, "%s %d %d %d %d\n",
-            proc->pname, proc->ptype, proc->plev, proc->faddr, proc->laddr);
+        fprintf(p->pro, "%s %s %d %d %d\n",
+            proc->pname, var_type_to_string(proc->ptype), proc->plev, proc->faddr, proc->laddr);
     }
 
     for (int i = 0; i < p->var_count; i++) {
         VariableEntry* var = &p->vartab[i];
-        fprintf(p->var, "%s %s %d %d %d %d\n",
-            var->vname, var->vproc, var->vtype, var->vkind, var->vlev, var->vaddr);
+        fprintf(p->var, "%s %s %d %s %d %d\n",
+            var->vname, var->vproc, var->vkind, var_type_to_string(var->vtype),var->vlev, var->vaddr);
     }
 }

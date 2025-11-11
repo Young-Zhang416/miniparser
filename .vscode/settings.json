@@ -10,6 +10,7 @@
         "new": "c",
         "typeinfo": "c",
         "stdbool.h": "c",
-        "parser.h": "c"
+        "parser.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -7,4 +7,6 @@ typedef enum {
     VAR_UNKNOWN,
 }VarType;
 
+const char* var_type_to_string(VarType type);
+
 #endif

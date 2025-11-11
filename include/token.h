@@ -29,5 +29,6 @@ typedef enum {
     _EOF,
 } TokenType;
 
+const char* get_token_name(TokenType);
 
 #endif

@@ -2,7 +2,11 @@
 #define PARSER_H
 #include "token.h"
 #include "table.h"
+#include <stddef.h>
+#include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 #define MAX_TOKENS 1024
 
 typedef struct {
@@ -10,7 +14,7 @@ typedef struct {
     char value[16];
 } Token;
 
-typedef struct {
+typedef struct Parser{
     Token* tokens;
     size_t token_count;
     size_t token_index;
@@ -35,21 +39,16 @@ typedef struct {
     int line_number;
 } Parser;
 
+void parser_error(Parser*, const char*);
+bool is_valid_identifier(const char*);
 Parser* create_parser(const char*);
 void destroy_parser(Parser*);
 void print_tokens(Parser*);
 void next_token(Parser*);
 TokenType current_token_type(Parser*);
 TokenType peek_token_type(Parser*);
+void consume_eoln(Parser*);
 bool match(Parser*, TokenType);
-void add_variable(Parser*, const char*, VarType, int);
-void add_procedure(Parser*, const char*, int, int);
-void parser_error(Parser*, const char*);
-bool is_valid_identifier(const char*);
-
-VariableEntry* find_variable(Parser*, const char*, const char*);
-ProcedureEntry* find_procedure(Parser*, const char*);
-
 bool program(Parser*);
 void block(Parser*);
 void declarations(Parser*);
@@ -77,7 +76,5 @@ void parameter_list(Parser*);
 void conditional_expression(Parser*);
 void relation_operator(Parser*);
 void output_to_file(Parser* p);
-
-const char* get_token_name(TokenType);
 
 #endif

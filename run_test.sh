@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ROOT_DIR="/home/young/Project/miniparser"
+ROOT_DIR="/data1/zhangyang/github/miniparser"
 BUILD_DIR="$ROOT_DIR/build"
 TARGET_DIR="$ROOT_DIR/target"
 TARGET_EXE="$TARGET_DIR/miniparser"
