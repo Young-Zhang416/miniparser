@@ -73,29 +73,29 @@ CMakeFiles/miniparser.dir/src/main.c.o: CMakeFiles/miniparser.dir/flags.make
 CMakeFiles/miniparser.dir/src/main.c.o: /home/young/Project/miniparser/src/main.c
 CMakeFiles/miniparser.dir/src/main.c.o: CMakeFiles/miniparser.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/young/Project/miniparser/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/miniparser.dir/src/main.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/miniparser.dir/src/main.c.o -MF CMakeFiles/miniparser.dir/src/main.c.o.d -o CMakeFiles/miniparser.dir/src/main.c.o -c /home/young/Project/miniparser/src/main.c
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/miniparser.dir/src/main.c.o -MF CMakeFiles/miniparser.dir/src/main.c.o.d -o CMakeFiles/miniparser.dir/src/main.c.o -c /home/young/Project/miniparser/src/main.c
 
 CMakeFiles/miniparser.dir/src/main.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/miniparser.dir/src/main.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/young/Project/miniparser/src/main.c > CMakeFiles/miniparser.dir/src/main.c.i
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/young/Project/miniparser/src/main.c > CMakeFiles/miniparser.dir/src/main.c.i
 
 CMakeFiles/miniparser.dir/src/main.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/miniparser.dir/src/main.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/young/Project/miniparser/src/main.c -o CMakeFiles/miniparser.dir/src/main.c.s
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/young/Project/miniparser/src/main.c -o CMakeFiles/miniparser.dir/src/main.c.s
 
 CMakeFiles/miniparser.dir/src/parser.c.o: CMakeFiles/miniparser.dir/flags.make
 CMakeFiles/miniparser.dir/src/parser.c.o: /home/young/Project/miniparser/src/parser.c
 CMakeFiles/miniparser.dir/src/parser.c.o: CMakeFiles/miniparser.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/young/Project/miniparser/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/miniparser.dir/src/parser.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/miniparser.dir/src/parser.c.o -MF CMakeFiles/miniparser.dir/src/parser.c.o.d -o CMakeFiles/miniparser.dir/src/parser.c.o -c /home/young/Project/miniparser/src/parser.c
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/miniparser.dir/src/parser.c.o -MF CMakeFiles/miniparser.dir/src/parser.c.o.d -o CMakeFiles/miniparser.dir/src/parser.c.o -c /home/young/Project/miniparser/src/parser.c
 
 CMakeFiles/miniparser.dir/src/parser.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/miniparser.dir/src/parser.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/young/Project/miniparser/src/parser.c > CMakeFiles/miniparser.dir/src/parser.c.i
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/young/Project/miniparser/src/parser.c > CMakeFiles/miniparser.dir/src/parser.c.i
 
 CMakeFiles/miniparser.dir/src/parser.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/miniparser.dir/src/parser.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/young/Project/miniparser/src/parser.c -o CMakeFiles/miniparser.dir/src/parser.c.s
+	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/young/Project/miniparser/src/parser.c -o CMakeFiles/miniparser.dir/src/parser.c.s
 
 # Object files for target miniparser
 miniparser_OBJECTS = \

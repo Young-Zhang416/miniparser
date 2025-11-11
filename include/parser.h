@@ -78,4 +78,6 @@ void conditional_expression(Parser*);
 void relation_operator(Parser*);
 void output_to_file(Parser* p);
 
+const char* get_token_name(TokenType);
+
 #endif

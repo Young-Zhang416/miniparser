@@ -200,31 +200,68 @@ bool match(Parser* parser, TokenType type) {
         return true;
     }
     else {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected token type %d but found %d\n", parser->line_number, type, current_token_type(parser));
+        char error_msg[256];
+        const char* expected_token_name = get_token_name(type);
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "Missing '%s' before '%s'", 
+                 expected_token_name, actual_token_name);
         parser_error(parser, error_msg);
     }
     return false;
 }
 
+const char* get_token_name(TokenType type) {
+    switch (type) {
+        case BEGIN: return "begin";
+        case END: return "end";
+        case INTEGER: return "integer";
+        case IF: return "if";
+        case THEN: return "then";
+        case ELSE: return "else";
+        case FUNCTION: return "function";
+        case READ: return "read";
+        case WRITE: return "write";
+        case IDENT: return "ident";
+        case CONST: return "const";
+        case EQU: return "==";
+        case NEQ: return "<>";
+        case LE: return "<=";
+        case LT: return "<";
+        case GE: return ">=";
+        case GT: return ">";
+        case MINUS: return "-";
+        case MUL: return "*";
+        case ASSIGN: return ":=";
+        case OPENPAREN: return "(";
+        case CLOSEPAREN: return ")";
+        case SEMICOLON: return ";";
+        case EOLN: return "\\n";
+        case _EOF: return "EOF";
+        default: return "unknown";
+    }
+}
+
 void add_variable(Parser* parser, const char* value, VarType type, int kind) {
     if (!is_valid_identifier(value)) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: invalid identifier '%s'\n", parser->line_number, value);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "invalid identifier '%s'", 
+                 value);
         parser_error(parser, error_msg);
         return;
     }
 
     VariableEntry* exist = find_variable(parser, value, parser->current_proc);
     if (exist != NULL) {
-        // 合并“函数体内声明”的形参类型定义：已存在且是参数（vkind=1），当前是普通变量声明（kind=0）
         if (exist->vkind == 1 && kind == 0) {
-            exist->vtype = type; // 确认参数类型（VAR_UNKNOWN -> VAR_INT）
+            exist->vtype = type; 
             return;
         }
-        // 其它情况为重复声明错误
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' already declared in procedure '%s'\n", parser->line_number, value, parser->current_proc);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "variable '%s' already declared in procedure '%s'", 
+                 value, parser->current_proc);
         parser_error(parser, error_msg);
         return;
     }
@@ -253,15 +290,19 @@ void add_variable(Parser* parser, const char* value, VarType type, int kind) {
 
 void add_procedure(Parser* parser, const char* name, int var_start, int var_end) {
     if (!is_valid_identifier(name)) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: invalid procedure name '%s'\n", parser->line_number, name);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "invalid procedure name '%s'", 
+                 name);
         parser_error(parser, error_msg);
         return;
     }
 
     if (find_procedure(parser, name) != NULL) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: procedure '%s' already declared\n", parser->line_number, name);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "procedure '%s' already declared", 
+                 name);
         parser_error(parser, error_msg);
         return;
     }
@@ -290,8 +331,10 @@ void add_procedure(Parser* parser, const char* name, int var_start, int var_end)
 void update_procedure(Parser* parser, const char* name, int var_start, int var_end) {
     ProcedureEntry* proc = find_procedure(parser, name);
     if (!proc) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Internal Error: procedure '%s' not found for update\n", name);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "Internal Error: procedure '%s' not found for update", 
+                 name);
         parser_error(parser, error_msg);
         return;
     }
@@ -302,9 +345,9 @@ void update_procedure(Parser* parser, const char* name, int var_start, int var_e
 void parser_error(Parser* parser, const char* msg) {
     parser->has_error = 1;
     if (parser->err) {
-        fprintf(parser->err, "LINE:%d %s;\n", parser->line_number, msg);
+        fprintf(parser->err, "LINE:%d %s\n", parser->line_number, msg);
     }
-    fprintf(stderr, "LINE:%d %s;\n", parser->line_number, msg);
+    fprintf(stderr, "LINE:%d %s\n", parser->line_number, msg);
 }
 
 bool is_valid_identifier(const char* str) {
@@ -381,8 +424,11 @@ void declarations(Parser* parser) {
 
 void declaration(Parser* parser) {
     if (current_token_type(parser) != INTEGER) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected 'INTEGER' at the beginning of declaration but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected 'INTEGER' at the beginning of declaration but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
@@ -395,8 +441,11 @@ void declaration(Parser* parser) {
         var_declaration(parser); 
     }
     else {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected variable or function declaration but found token type %d\n", parser->line_number, lookahead);
+        char error_msg[256];
+        const char* lookahead_token_name = get_token_name(lookahead);
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected variable or function declaration but found '%s'", 
+                 lookahead_token_name);
         parser_error(parser, error_msg);
     }
 }
@@ -417,8 +466,11 @@ void var(Parser* parser, int kind) {
     }
 
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected identifier but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected identifier but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
@@ -433,8 +485,11 @@ void func_declaration(Parser* parser) {
     }
 
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected function name but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected function name but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
@@ -450,14 +505,11 @@ void func_declaration(Parser* parser) {
 
     char old_proc[16];
     strcpy(old_proc, parser->current_proc);
-    // 进入函数作用域
     strcpy(parser->current_proc, func_name);
     parser->current_level++;
 
-    // 提前登记，支持递归
     add_procedure(parser, func_name, var_start, -1);
 
-    // 形参（单个）
     parameter(parser);
 
     if (!match(parser, CLOSEPAREN)) {
@@ -466,7 +518,6 @@ void func_declaration(Parser* parser) {
         return;
     }
 
-    // 函数头分号
     if (!match(parser, SEMICOLON)) {
         parser->current_level--;
         strcpy(parser->current_proc, old_proc);
@@ -477,13 +528,11 @@ void func_declaration(Parser* parser) {
         next_token(parser);
     }
 
-    // 函数体
     block(parser);
 
     int var_end = parser->var_count - 1;
     update_procedure(parser, func_name, var_start, var_end);
 
-    // 离开函数作用域
     strcpy(parser->current_proc, old_proc);
     parser->current_level--;
 }
@@ -521,14 +570,16 @@ void execution(Parser* parser) {
         break;
 
     case BEGIN:
-        // 块语句作为语句出现，不需要分号
         block(parser);
         break;
 
     default:
     {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: unexpected token type %d in execution\n", parser->line_number, cur_type);
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(cur_type);
+        snprintf(error_msg, sizeof(error_msg), 
+                 "unexpected token '%s' in execution", 
+                 actual_token_name);
         parser_error(parser, error_msg);
     }
     break;
@@ -537,9 +588,8 @@ void execution(Parser* parser) {
 
 void parameter(Parser* parser) {
     if (current_token_type(parser) != IDENT) {
-        return; // 允许无参，但当前语言只支持单参；此处无参直接返回
+        return; 
     }
-    // 形参：vkind=1，类型未知，待函数体内 integer 声明确定
     add_variable(parser, parser->current_token.value, VAR_UNKNOWN, 1);
     match(parser, IDENT);
 }
@@ -554,16 +604,21 @@ void read_statement(Parser* parser) {
     }
 
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected identifier in read statement but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected identifier in read statement but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
 
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
     if (var_entry == NULL) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "variable '%s' not declared in procedure '%s'", 
+                 parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
         return;
     }
@@ -589,16 +644,21 @@ void write_statement(Parser* parser) {
     }
 
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected identifier in write statement but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected identifier in write statement but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
 
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
     if (var_entry == NULL) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "variable '%s' not declared in procedure '%s'", 
+                 parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
         return;
     }
@@ -616,22 +676,25 @@ void write_statement(Parser* parser) {
 
 void assignment_statement(Parser* parser) {
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected identifier in assignment statement but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected identifier in assignment statement but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
 
-    // 函数名可作为返回变量
     bool is_return_assignment = (strcmp(parser->current_token.value, parser->current_proc) == 0);
 
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
 
     if (var_entry == NULL && !is_return_assignment) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "variable '%s' not declared in procedure '%s'", 
+                 parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
-        // 同步：尽量消费本条语句
         match(parser, IDENT);
         if (current_token_type(parser) == ASSIGN) {
             match(parser, ASSIGN);
@@ -702,8 +765,11 @@ void factor(Parser* parser) {
 
     default:
     {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: unexpected token type %d in factor\n", parser->line_number, cur_type);
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(cur_type);
+        snprintf(error_msg, sizeof(error_msg), 
+                 "unexpected token '%s' in factor", 
+                 actual_token_name);
         parser_error(parser, error_msg);
     }
     break;
@@ -712,16 +778,21 @@ void factor(Parser* parser) {
 
 void var_reference(Parser* parser) {
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected identifier in variable reference but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected identifier in variable reference but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
 
     VariableEntry* var_entry = find_variable(parser, parser->current_token.value, parser->current_proc);
     if (var_entry == NULL) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: variable '%s' not declared in procedure '%s'\n", parser->line_number, parser->current_token.value, parser->current_proc);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "variable '%s' not declared in procedure '%s'", 
+                 parser->current_token.value, parser->current_proc);
         parser_error(parser, error_msg);
         return;
     }
@@ -731,16 +802,21 @@ void var_reference(Parser* parser) {
 
 void func_call(Parser* parser) {
     if (current_token_type(parser) != IDENT) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected function name in function call but found token type %d\n", parser->line_number, current_token_type(parser));
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(current_token_type(parser));
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected function name in function call but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
         return;
     }
 
     ProcedureEntry* proc_entry = find_procedure(parser, parser->current_token.value);
     if (proc_entry == NULL) {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Error at line %d: procedure '%s' not declared\n", parser->line_number, parser->current_token.value);
+        char error_msg[256];
+        snprintf(error_msg, sizeof(error_msg), 
+                 "procedure '%s' not declared", 
+                 parser->current_token.value);
         parser_error(parser, error_msg);
         return;
     }
@@ -806,8 +882,11 @@ void relation_operator(Parser* parser) {
         break;
     default:
     {
-        char error_msg[128];
-        snprintf(error_msg, sizeof(error_msg), "Syntax Error at line %d: expected relational operator but found token type %d\n", parser->line_number, type);
+        char error_msg[256];
+        const char* actual_token_name = get_token_name(type);
+        snprintf(error_msg, sizeof(error_msg), 
+                 "expected relational operator but found '%s'", 
+                 actual_token_name);
         parser_error(parser, error_msg);
     }
     break;

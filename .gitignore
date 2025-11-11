@@ -1,0 +1,5 @@
+tests/
+target/
+.vscode/
+clear.sh
+run_test.sh
